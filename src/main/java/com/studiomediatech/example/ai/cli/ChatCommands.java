@@ -1,8 +1,13 @@
 package com.studiomediatech.example.ai.cli;
 
 import java.io.PrintWriter;
+import java.net.ConnectException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jline.reader.EndOfFileException;
@@ -11,6 +16,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.shell.core.InputReader;
 import org.springframework.shell.core.command.CommandContext;
@@ -36,10 +42,12 @@ class ChatCommands {
     private static final int MAX_HISTORY_MESSAGES = 20;
 
     private final ChatClient chatClient;
+    private final String baseUrl;
     private final List<Message> history = new ArrayList<>();
 
-    ChatCommands(ChatClient chatClient) {
+    ChatCommands(ChatClient chatClient, @Value("${likeourowl.ai.base-url}") String baseUrl) {
         this.chatClient = chatClient;
+        this.baseUrl = baseUrl;
     }
 
     @Command(name = "ask", group = "LikeOurOwl", description = "Ask a single question about the railway data",
@@ -126,7 +134,10 @@ class ChatCommands {
                     .blockLast();
         } catch (Exception e) {
             out.println();
-            out.println("! " + rootCauseMessage(e));
+            out.println("! Model call failed: " + rootCauseMessage(e));
+            if (looksLikeConnectionProblem(e)) {
+                out.println("  Is the model server at " + baseUrl + " running?");
+            }
             out.flush();
             return;
         }
@@ -150,5 +161,26 @@ class ChatCommands {
             cause = cause.getCause();
         }
         return cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName();
+    }
+
+    private static boolean looksLikeConnectionProblem(Throwable throwable) {
+        for (Throwable cause = throwable; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ConnectException || cause instanceof SocketException
+                    || cause instanceof SocketTimeoutException || cause instanceof UnknownHostException) {
+                return true;
+            }
+            String message = cause.getMessage();
+            if (message != null) {
+                String lower = message.toLowerCase(Locale.ROOT);
+                if (lower.contains("connect") || lower.contains("socket")
+                        || lower.contains("timeout") || lower.contains("unreachable")) {
+                    return true;
+                }
+            }
+            if (cause.getCause() == cause) {
+                break;
+            }
+        }
+        return false;
     }
 }

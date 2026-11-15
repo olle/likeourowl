@@ -4,3 +4,8 @@ export JAVA_HOME
 .PHONY: verify v
 verify v:
 	./mvnw verify
+
+# Interactive Spring Shell chat in the terminal (the 'cli' profile).
+.PHONY: start
+start:
+	./mvnw -q spring-boot:run -Dspring-boot.run.arguments=--cli

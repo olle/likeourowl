@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
+import org.springframework.shell.core.command.CommandParser;
+import org.springframework.shell.core.command.CommandRegistry;
 import org.springframework.shell.jline.PromptProvider;
 
 /**
@@ -15,6 +17,11 @@ import org.springframework.shell.jline.PromptProvider;
 @Configuration
 @Profile("cli")
 class CliShellConfig {
+
+    @Bean
+    CommandParser commandParser(CommandRegistry commandRegistry) {
+        return new ChatCommandParser(commandRegistry);
+    }
 
     @Bean
     PromptProvider promptProvider() {
@@ -34,6 +41,8 @@ class CliShellConfig {
                   chat   start a conversation (answers stream in)
                   ask    one-off question, e.g. ask how many stops did Utrecht Centraal have?
                   help   list all commands, quit to exit
+
+                Or just type a question - anything that is not a command is sent to the model.
                 """);
     }
 }
