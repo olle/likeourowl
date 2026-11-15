@@ -1,6 +1,9 @@
 target/
 !.mvn/wrapper/maven-wrapper.jar
 
+### Local data ###
+data/
+
 ### IDE ###
 .idea/
 *.iml
